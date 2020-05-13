@@ -3,35 +3,40 @@
 # $URL$
 # $Id$
 
-wince_gcc_root = /usr/local/wince/cross-tools
+sdk_gcc_root = $(DEVKITARM)
 srcdir    = .
 VPATH     = $(srcdir)
 
-CC     = arm-wince-pe-gcc
-CXX    = arm-wince-pe-g++
-LD     = arm-wince-pe-g++
-AR     = arm-wince-pe-ar cru
-RANLIB = arm-wince-pe-ranlib
-STRIP  = arm-wince-pe-strip
-WINDRES= arm-wince-pe-windres
+CC     = $(DEVKITARM)/bin/arm-none-eabi-gcc
+CXX    = $(DEVKITARM)/bin/arm-none-eabi-g++
+LD     = $(DEVKITARM)/bin/arm-none-eabi-g++
+AR     = $(DEVKITARM)/bin/arm-none-eabi-ar cru
+RANLIB = $(DEVKITARM)/bin/arm-none-eabi-ranlib
+STRIP  = $(DEVKITARM)/bin/arm-none-eabi-strip
+RANLIB = $(DEVKITARM)/bin/arm-none-eabi-ranlib
+WINDRES= $(DEVKITARM)/bin/arm-none-eabi-windres
 MKDIR  = mkdir -p
 RM     = rm -f
 RM_REC = rm -rf
 ECHO   = echo -n
 CAT    = cat
-AS     = arm-wince-pe-as
+AS     = $(DEVKITARM)/bin/arm-none-eabi-as
 
 DEFINES := 
 
-CFLAGS := -O2 -march=armv4 -mtune=xscale -I$(srcdir) -I$(wince_gcc_root)/include -D__cdecl= -D_WIN32_WCE=300 -D_ARM_ASSEM_ -static
+CFLAGS := -g -O3 -mcpu=arm7tdmi -mtune=arm7tdmi -I$(srcdir) -I$(sdk_gcc_root)/include -D_ARM_ASSEM_ -static \
+        -ffast-math \
+        -falign-functions=4
 
 CXXFLAGS := $(CFLAGS)
 
-LDFLAGS := -Llibs/lib -L$(wince_gcc_root)/lib
+LDFLAGS := -Llibs/lib -L$(sdk_gcc_root)/lib
 LIBS := --entry WinMainCRTStartup
 
 OBJS := 
 MODULE_DIRS += .
+
+OUTPUT_LIB = libTremolo008.a
 
 LIBOBJS := bitwise.o bitwiseARM.o codebook.o dpen.o dsp.o floor0.o \
            floor1.o floor1ARM.o floor_lookup.o framing.o info.o mapping0.o \
@@ -65,17 +70,21 @@ EXEOBJS_LC := testtremor.olc
 .c.olc:
 	$(CC) $(CFLAGS) -c $(<) -o $*.olc -D_LOW_ACCURACY_ -DONLY_C
 
-all: libTremolo006.lib bittest.exe testtremor.exe testtremorC.exe testtremorL.exe testtremorLC.exe annotate.exe
-	cp libTremolo006.lib /cygdrive/c/cvs/scummvm/trunk/backends/platform/wince/libs/lib/
+all: $(OUTPUT_LIB)
+
+# bittest.exe testtremor.exe testtremorC.exe testtremorL.exe testtremorLC.exe annotate.exe
+
+install: all
+	cp $(OUTPUT_LIB) /cygdrive/c/cvs/scummvm/trunk/backends/platform/wince/libs/lib/
 	cp ivorbisfile.h /cygdrive/c/cvs/scummvm/trunk/backends/platform/wince/libs/include/tremolo006/tremor/
 	cp config_types.h /cygdrive/c/cvs/scummvm/trunk/backends/platform/wince/libs/include/tremolo006/
 	cp ivorbiscodec.h /cygdrive/c/cvs/scummvm/trunk/backends/platform/wince/libs/include/tremolo006/
 	cp ogg.h /cygdrive/c/cvs/scummvm/trunk/backends/platform/wince/libs/include/tremolo006/
 	cp os_types.h /cygdrive/c/cvs/scummvm/trunk/backends/platform/wince/libs/include/tremolo006/
 
-libTremolo006.lib: $(LIBOBJS)
-	arm-wince-pe-ar cru $@ $^
-	arm-wince-pe-ranlib $@
+$(OUTPUT_LIB): $(LIBOBJS)
+	$(AR) $@ $^
+	$(RANLIB) $@
 
 bitwiseTEST.o: bitwise.c
 	$(CC) $(CFLAGS) -c -o bitwiseTEST.o bitwise.c -D_V_BIT_TEST
@@ -99,7 +108,4 @@ annotate.exe: annotate.c
 	gcc $^ -o $@
 
 clean:
-	rm `find . -name \*.o`
-	rm `find . -name \*.ol`
-	rm `find . -name \*.oc`
-	rm `find . -name \*.olc`
+	rm -f *.o *.ol *.oc *.olc
